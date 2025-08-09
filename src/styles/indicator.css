@@ -1,0 +1,105 @@
+.ai-context-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 10000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-context-indicator:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.ai-context-indicator.green {
+  border-color: #4caf50;
+  color: #2e7d32;
+}
+
+.ai-context-indicator.yellow {
+  border-color: #ff9800;
+  color: #f57c00;
+}
+
+.ai-context-indicator.red {
+  border-color: #f44336;
+  color: #c62828;
+}
+
+.ai-context-indicator.overflow {
+  animation: flash 0.5s infinite;
+}
+
+@keyframes flash {
+  0%, 100% {
+    opacity: 1;
+    border-color: #f44336;
+  }
+  50% {
+    opacity: 0.5;
+    border-color: #ff6b6b;
+  }
+}
+
+.ai-context-tooltip {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.ai-context-indicator:hover .ai-context-tooltip {
+  opacity: 1;
+}
+
+.ai-context-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  right: 20px;
+  border: 6px solid transparent;
+  border-bottom-color: rgba(0, 0, 0, 0.9);
+}
+
+@media (prefers-color-scheme: dark) {
+  .ai-context-indicator {
+    background: rgba(30, 30, 30, 0.95);
+    border-color: #444;
+    color: #e0e0e0;
+  }
+  
+  .ai-context-indicator.green {
+    border-color: #66bb6a;
+    color: #81c784;
+  }
+  
+  .ai-context-indicator.yellow {
+    border-color: #ffa726;
+    color: #ffb74d;
+  }
+  
+  .ai-context-indicator.red {
+    border-color: #ef5350;
+    color: #e57373;
+  }
+}
