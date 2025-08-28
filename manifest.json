@@ -14,22 +14,41 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://claude.ai/*"],
-      "js": ["dist/content-scripts/claude.js"],
-      "css": ["dist/styles/indicator.css"],
+      "matches": [
+        "https://claude.ai/*"
+      ],
+      "js": [
+        "dist/content-scripts/claude.js"
+      ],
+      "css": [
+        "dist/styles/indicator.css"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
-      "js": ["dist/content-scripts/chatgpt.js"],
-      "css": ["dist/styles/indicator.css"],
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*"
+      ],
+      "js": [
+        "dist/content-scripts/chatgpt.js"
+      ],
+      "css": [
+        "dist/styles/indicator.css"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["dist/styles/indicator.css"],
-      "matches": ["https://claude.ai/*", "https://chat.openai.com/*", "https://chatgpt.com/*"]
+      "resources": [
+        "dist/styles/indicator.css"
+      ],
+      "matches": [
+        "https://claude.ai/*",
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*"
+      ]
     }
   ]
 }

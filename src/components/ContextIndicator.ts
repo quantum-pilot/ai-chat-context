@@ -1,7 +1,7 @@
-export function createContextIndicator() {
+export function createContextIndicator(provider: 'claude' | 'chatgpt' = 'claude') {
   const container = document.createElement('div');
   container.id = 'ai-context-indicator';
-  
+
   // Apply styles
   container.style.cssText = `
     position: fixed;
@@ -92,37 +92,40 @@ export function createContextIndicator() {
       addPulseAnimation();
       return;
     }
-    
+
     const percentage = Math.round((currentTokens / maxTokens) * 100);
     const remaining = maxTokens - currentTokens;
-    
+
     // Update text with warning icon if content is scrollable
     const warningIcon = hasScrollableContent ? '⚠️ ' : '';
     tokenDisplay.textContent = `${warningIcon}${currentTokens.toLocaleString()} / ${maxTokens.toLocaleString()}`;
     percentDisplay.textContent = `(${percentage}%)`;
-    
+
     // Update tooltip
     const scrollWarning = hasScrollableContent ? '\n\n📜 Note: Scroll to load all messages for accurate count' : '';
+    const systemPromptNote = provider === 'chatgpt' 
+      ? '\n\n💡 System prompts can add: 2K-5K tokens'
+      : '\n\n💡 System prompts can add: 10K-15K tokens';
     tooltip.innerHTML = `
 <strong>Context Window Usage</strong>
 Current: ${currentTokens.toLocaleString()} tokens
 Maximum: ${maxTokens.toLocaleString()} tokens
 Remaining: ${remaining.toLocaleString()} tokens
 Usage: ${percentage}%
-${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}${scrollWarning}
+${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}${scrollWarning}${systemPromptNote}
     `.trim();
-    
+
     // Update colors based on usage
     let bgColor = '#e8f5e9'; // Green
     let borderColor = '#4caf50';
     let textColor = '#2e7d32';
-    
+
     if (percentage > 90) {
       // Red - Critical
       bgColor = '#ffebee';
       borderColor = '#f44336';
       textColor = '#c62828';
-      
+
       // Add flashing animation if over limit
       if (percentage >= 100) {
         container.style.animation = 'flash 1s infinite';
@@ -139,7 +142,7 @@ ${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}${scrollWarning}
     } else {
       container.style.animation = 'none';
     }
-    
+
     container.style.backgroundColor = bgColor;
     container.style.borderColor = borderColor;
     tokenDisplay.style.color = textColor;
@@ -159,7 +162,7 @@ ${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}${scrollWarning}
       document.head.appendChild(style);
     }
   };
-  
+
   // Add pulse animation for loading state
   const addPulseAnimation = () => {
     if (!document.querySelector('#context-pulse-style')) {

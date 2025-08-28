@@ -8,9 +8,11 @@ const SELECTORS = {
   // Main chat container - fallback approaches for finding conversation area
   chatContainer: [
     '[data-testid="conversation-turns"]', // Original selector
-    'div:has([data-testid^="user-"]), div:has([data-testid^="assistant-"])', // Container with messages
-    '.flex-1\\. > div', // Chat content area
-    '.relative.mx-auto.max-w-3xl', // Main content wrapper
+    'div.flex.flex-col:has(div[data-testid^="user-"])', // Flex container with user messages
+    'div.flex.flex-col:has(div[data-testid^="assistant-"])', // Flex container with assistant messages  
+    'main div.flex.flex-col', // Main flex column in chat area
+    'main > div > div', // Main content area
+    '.relative.mx-auto', // Content wrapper
   ],
   // Individual message elements
   userMessage: '[data-testid^="user-"]:not([data-testid="user-menu-button"])',
@@ -21,15 +23,16 @@ const SELECTORS = {
     'div:has(> div.font-claude-message)', // Parent container
   ],
   // Input field
-  inputField: ['div[contenteditable="true"]', 'textarea', '[role="textbox"]'],
+  inputField: ['.ProseMirror', 'div[contenteditable="true"]', 'textarea', '[role="textbox"]'],
   // Model selector (if visible)
   modelSelector: ['[data-testid="model-selector"]', 'button:has(img[alt*="Claude"])', 'button:contains("Sonnet"), button:contains("Opus"), button:contains("Haiku")'],
   // Main content area - fallback approaches
-  mainContent: ['main', 'body', '.flex.min-h-screen.w-full', '.relative.mx-auto.max-w-3xl'],
+  mainContent: ['main', '#__next', 'div.flex.min-h-screen', 'body'],
 };
 
 class ClaudeContextTracker {
   private observer: MutationObserver | null = null;
+  private inputObserver: MutationObserver | null = null;
   private contextIndicator: ReturnType<typeof createContextIndicator>;
   private currentModel: string = 'claude-sonnet-4'; // Default to latest model
   private tokenCache: Map<string, number> = new Map();
@@ -41,16 +44,17 @@ class ClaudeContextTracker {
   private scrollListener: (() => void) | null = null;
   private hasScrollableContent: boolean = false;
   private isFreeUser: boolean = false;
+  private hasCompletedInitialLoad: boolean = false;
 
   constructor() {
-    this.contextIndicator = createContextIndicator();
+    this.contextIndicator = createContextIndicator('claude');
     this.init();
   }
 
   // Helper function to find elements using fallback selectors
   private findElement(selectors: string | string[]): Element | null {
     const selectorArray = Array.isArray(selectors) ? selectors : [selectors];
-    
+
     for (const selector of selectorArray) {
       try {
         const element = document.querySelector(selector);
@@ -67,7 +71,7 @@ class ClaudeContextTracker {
   private findAllElements(selectors: string | string[]): Element[] {
     const selectorArray = Array.isArray(selectors) ? selectors : [selectors];
     const allElements: Element[] = [];
-    
+
     for (const selector of selectorArray) {
       try {
         const elements = document.querySelectorAll(selector);
@@ -77,7 +81,7 @@ class ClaudeContextTracker {
         continue;
       }
     }
-    
+
     // Remove duplicates by using Set with element references
     return Array.from(new Set(allElements));
   }
@@ -94,21 +98,34 @@ class ClaudeContextTracker {
   private setup() {
     // Insert context indicator into page
     this.insertIndicator();
-    
-    // Show initial loading state
+
+    // For new/empty chats, just show 0 immediately
     const modelLimit = CLAUDE_MODELS[this.currentModel];
     const maxTokens = typeof modelLimit === 'number' ? modelLimit : 50000;
-    this.contextIndicator.update(0, maxTokens, false, true); // Show loading state
     
+    // Check if there are any messages first
+    const hasMessages = document.querySelector(SELECTORS.userMessage) || 
+                       document.querySelector('[data-testid^="assistant-"]');
+    
+    if (hasMessages) {
+      // Show loading state only if there are messages to calculate
+      this.contextIndicator.update(0, maxTokens, false, true);
+    } else {
+      // New chat - just show 0
+      this.contextIndicator.update(0, maxTokens, false, false);
+    }
+
     // Start observing chat changes
     this.observeChat();
-    
-    // Initial calculation
-    this.calculateContext();
-    
+
+    // Initial calculation with slight delay to ensure DOM is ready
+    setTimeout(() => {
+      this.calculateContext(true);
+    }, 200);
+
     // Observe model changes if selector exists
     this.observeModelChanges();
-    
+
     // Watch for URL changes (chat switches)
     this.observeUrlChanges();
   }
@@ -130,7 +147,7 @@ class ClaudeContextTracker {
     const originalPushState = history.pushState;
     const originalReplaceState = history.replaceState;
 
-    history.pushState = function(...args) {
+    history.pushState = function (...args) {
       originalPushState.apply(history, args);
       setTimeout(() => {
         if (tracker) {
@@ -139,7 +156,7 @@ class ClaudeContextTracker {
       }, 100);
     };
 
-    history.replaceState = function(...args) {
+    history.replaceState = function (...args) {
       originalReplaceState.apply(history, args);
       setTimeout(() => {
         if (tracker) {
@@ -152,23 +169,32 @@ class ClaudeContextTracker {
   private handleChatSwitch() {
     const newUrl = window.location.href;
     if (newUrl === this.currentUrl) return;
-    
-    console.log('Chat switched, resetting context tracker');
+
     this.currentUrl = newUrl;
-    
-    // Show loading state immediately
-    const modelLimit = CLAUDE_MODELS[this.currentModel];
-    const maxTokens = typeof modelLimit === 'number' ? modelLimit : 50000;
-    this.contextIndicator.update(0, maxTokens, false, true); // Show loading state
-    
+
     // Clear token cache for new chat
     this.tokenCache.clear();
     
-    // Disconnect existing observer
+    // Reset initial load flag for new chat
+    this.hasCompletedInitialLoad = false;
+
+    // Disconnect existing observers
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
     }
+    if (this.inputObserver) {
+      this.inputObserver.disconnect();
+      this.inputObserver = null;
+    }
+
+    // Show loading state immediately for chat switches
+    const modelLimit = CLAUDE_MODELS[this.currentModel];
+    const maxTokens = typeof modelLimit === 'number' ? modelLimit : 50000;
+    
+    // For chat switches, show loading state by default
+    // We'll determine if it's empty during calculation
+    this.contextIndicator.update(0, maxTokens, false, true);
     
     // Re-observe the new chat
     setTimeout(() => {
@@ -191,13 +217,10 @@ class ClaudeContextTracker {
     const targetElement = this.findElement(SELECTORS.mainContent);
     if (targetElement) {
       targetElement.appendChild(this.contextIndicator);
-      console.log('Context indicator inserted successfully into:', targetElement.tagName, targetElement.className);
+      // Indicator inserted successfully
     } else {
-      console.warn('Could not find suitable element to insert context indicator');
       // Try a direct body insertion as fallback
-      console.log('Trying fallback insertion to body');
       document.body.appendChild(this.contextIndicator);
-      console.log('Context indicator inserted into body as fallback');
     }
   }
 
@@ -207,15 +230,15 @@ class ClaudeContextTracker {
       // Retry after a delay if chat container not found, but limit retries
       if (this.retryCount < this.maxRetries) {
         this.retryCount++;
-        console.log(`Chat container not found, retrying... (${this.retryCount}/${this.maxRetries})`);
+        // Chat container not found, retrying...
         setTimeout(() => this.observeChat(), 1000);
       } else {
-        console.log('Max retries reached, skipping chat container observation');
+        // Max retries reached
       }
       return;
     }
 
-    console.log('Found chat container, setting up observer');
+    // Found chat container, setting up observer
     this.observer = new MutationObserver(() => {
       this.scheduleCalculation();
     });
@@ -228,6 +251,44 @@ class ClaudeContextTracker {
 
     // Set up scroll listener
     this.setupScrollListener(chatContainer);
+    
+    // Also observe the input field specifically
+    this.observeInputField();
+  }
+
+  private observeInputField() {
+    // Find and observe the ProseMirror input field
+    const inputField = this.findElement(SELECTORS.inputField);
+    if (!inputField) {
+      // Retry after a delay
+      setTimeout(() => this.observeInputField(), 1000);
+      return;
+    }
+
+    // Disconnect existing input observer if any
+    if (this.inputObserver) {
+      this.inputObserver.disconnect();
+    }
+
+    // Create observer for input field changes
+    this.inputObserver = new MutationObserver(() => {
+      this.scheduleCalculation();
+    });
+
+    // Observe with all mutation types to catch ProseMirror changes
+    this.inputObserver.observe(inputField, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeOldValue: true,
+      characterDataOldValue: true
+    });
+
+    // Also listen for input events on the field
+    inputField.addEventListener('input', () => {
+      this.scheduleCalculation();
+    });
   }
 
   private setupScrollListener(container: Element) {
@@ -255,7 +316,7 @@ class ClaudeContextTracker {
       // Check if content is scrollable
       const checkScrollable = () => {
         this.hasScrollableContent = scrollableElement.scrollHeight > scrollableElement.clientHeight;
-        console.log('Scrollable content detected:', this.hasScrollableContent);
+        // Scrollable content detected
       };
 
       checkScrollable();
@@ -264,10 +325,10 @@ class ClaudeContextTracker {
         checkScrollable();
         this.scheduleCalculation();
       };
-      
+
       // Listen for scroll events
       scrollableElement.addEventListener('scroll', this.scrollListener, { passive: true });
-      
+
       // Also check when DOM changes
       setTimeout(() => checkScrollable(), 1000);
     }
@@ -276,7 +337,7 @@ class ClaudeContextTracker {
   private observeModelChanges() {
     // First check for free user indicators
     this.detectFreeUser();
-    
+
     const modelSelector = this.findElement(SELECTORS.modelSelector);
     if (modelSelector) {
       // Extract model from selector
@@ -301,34 +362,34 @@ class ClaudeContextTracker {
     const hasMaxPlan = document.body.textContent?.includes('Max plan') || false;
     const hasProPlan = document.body.textContent?.includes('Pro plan') || false;
     const hasPaidPlan = hasMaxPlan || hasProPlan;
-    
+
     // Check for free user indicators only if no paid plan detected
     const hasUpgradePrompts = document.body.textContent?.includes('Upgrade to') || false;
     const hasLimitMessages = document.body.textContent?.includes('message limit') || false;
     const hasFreeIndicator = document.querySelector('[data-testid="free-badge"]') !== null;
-    
+
     // Only mark as free user if no paid plan detected AND free indicators present
     this.isFreeUser = !hasPaidPlan && (hasUpgradePrompts || hasLimitMessages || hasFreeIndicator);
-    
+
     if (this.isFreeUser) {
-      console.log('Detected Claude Free user');
+      // Detected Claude Free user
       this.currentModel = 'claude-free-web';
     } else if (hasPaidPlan) {
-      console.log(`Detected Claude paid plan: ${hasMaxPlan ? 'Max' : 'Pro'}`);
+      // Detected Claude paid plan
       // Don't override model here, let model detection handle it
     }
   }
 
   private updateModel(modelText: string) {
     const text = modelText.toLowerCase();
-    
+
     // Check for free user first
     this.detectFreeUser();
     if (this.isFreeUser) {
       this.currentModel = 'claude-free-web';
       return;
     }
-    
+
     // Parse model from text - check for new model names first
     if (text.includes('sonnet 4') || text.includes('sonnet-4')) {
       this.currentModel = 'claude-sonnet-4';
@@ -338,20 +399,14 @@ class ClaudeContextTracker {
       this.currentModel = 'claude-3.7-sonnet';
     } else if (text.includes('3.5 sonnet') || text.includes('3.5-sonnet')) {
       this.currentModel = 'claude-3.5-sonnet';
-    } else if (text.includes('opus')) {
-      this.currentModel = 'claude-3-opus';
     } else if (text.includes('sonnet')) {
       // Default to latest Sonnet if version not specified
       this.currentModel = 'claude-sonnet-4';
-    } else if (text.includes('haiku')) {
-      this.currentModel = 'claude-3-haiku';
-    } else if (text.includes('claude-2')) {
-      this.currentModel = 'claude-2';
     } else if (!this.isFreeUser) {
       // If paid user but no model detected, default to latest model  
       this.currentModel = 'claude-sonnet-4';
     }
-    console.log('Detected model:', this.currentModel);
+    // Model detected
   }
 
   private scheduleCalculation() {
@@ -359,63 +414,63 @@ class ClaudeContextTracker {
     if (this.calculationTimeout) {
       clearTimeout(this.calculationTimeout);
     }
-    
+
     // Skip if already calculating
     if (this.isCalculating) {
       return;
     }
-    
+
     // Schedule calculation with debouncing (500ms delay)
     this.calculationTimeout = setTimeout(() => {
-      this.calculateContext();
+      this.calculateContext(false);
     }, 500);
   }
 
-  private async calculateContext() {
+  private async calculateContext(initialLoad: boolean = false) {
     // Prevent multiple simultaneous calculations
     if (this.isCalculating) {
       return;
     }
-    
+
     try {
       this.isCalculating = true;
-      
+
       // Get all messages
       const userMessages = document.querySelectorAll(SELECTORS.userMessage);
       let assistantMessages = this.findAllElements(SELECTORS.assistantMessage);
-      
+
       // If no assistant messages found with main selectors, try alternative detection
       if (assistantMessages.length === 0) {
         // Look for group containers with substantive content
         const allGroups = document.querySelectorAll('div.group');
-        
+
         assistantMessages = [];
         allGroups.forEach((container) => {
           // Check if this is likely an assistant message
           const paragraphs = container.querySelectorAll('p');
           let hasSubstantiveContent = false;
-          
+
           // Check if any paragraph has substantial text (not UI elements)
           paragraphs.forEach(p => {
             const text = p.textContent || '';
             // Filter out UI text and short snippets
-            if (text.length > 50 && 
-                !text.includes('How can I help') && 
-                !text.includes('Reply to Claude') &&
-                !text.includes('Write your prompt')) {
+            if (text.length > 50 &&
+              !text.includes('How can I help') &&
+              !text.includes('Reply to Claude') &&
+              !text.includes('Write your prompt')) {
               hasSubstantiveContent = true;
             }
           });
-          
+
           if (hasSubstantiveContent) {
             // Check if this is NOT a user message
             // User messages have RS initials as a separate element at the start
             const firstChild = container.firstElementChild;
             const hasUserAvatar = firstChild && firstChild.textContent?.trim() === 'RS';
-            
+
             // Also check if this container has already been identified as a user message
             const isUserMessage = container.querySelector('[data-testid^="user-"]') !== null;
-            
+
             // If no user indicators and has substantive content, it's likely assistant
             if (!hasUserAvatar && !isUserMessage) {
               assistantMessages.push(container);
@@ -423,65 +478,94 @@ class ClaudeContextTracker {
           }
         });
       }
-      
+
       let totalTokens = 0;
-      
-      console.log(`Found ${userMessages.length} user messages and ${assistantMessages.length} assistant messages`);
-      
+
+      // Found messages to count
+
       // Count tokens in user messages
       for (const msg of userMessages) {
         const text = msg.textContent || '';
         const cacheKey = `user-${text.substring(0, 100)}`;
-        
+
         if (this.tokenCache.has(cacheKey)) {
           totalTokens += this.tokenCache.get(cacheKey)!;
         } else {
           const tokens = await countTokens(text);
           this.tokenCache.set(cacheKey, tokens);
           totalTokens += tokens;
-          console.log(`User message tokens: ${tokens} for text: ${text.substring(0, 50)}...`);
+          // Counted user message tokens
         }
       }
-      
+
       // Count tokens in assistant messages
       for (const msg of assistantMessages) {
         const text = msg.textContent || '';
         // Skip button text and metadata
         const cleanText = text.replace(/(Copy|Edit|Retry|Good response|Bad response|Share|Switch model)/g, '').trim();
         const cacheKey = `assistant-${cleanText.substring(0, 100)}`;
-        
+
         if (this.tokenCache.has(cacheKey)) {
           totalTokens += this.tokenCache.get(cacheKey)!;
         } else {
           const tokens = await countTokens(cleanText);
           this.tokenCache.set(cacheKey, tokens);
           totalTokens += tokens;
-          console.log(`Assistant message tokens: ${tokens} for text: ${cleanText.substring(0, 50)}...`);
+          // Counted assistant message tokens
         }
       }
-      
+
       // Get current input
       const inputField = this.findElement(SELECTORS.inputField);
       if (inputField) {
-        const inputText = (inputField as HTMLElement).textContent || (inputField as HTMLInputElement).value || '';
-        if (inputText && inputText !== 'Reply to Claude...' && inputText !== 'Write your prompt to Claude') {
+        // Handle ProseMirror editor (Claude uses this)
+        let inputText = '';
+        if (inputField.classList.contains('ProseMirror')) {
+          // ProseMirror stores text in paragraphs
+          const paragraphs = inputField.querySelectorAll('p');
+          inputText = Array.from(paragraphs).map(p => p.textContent || '').join('\n').trim();
+        } else {
+          // Fallback to regular text content or value
+          inputText = (inputField as HTMLElement).textContent || (inputField as HTMLInputElement).value || '';
+        }
+        
+        // Filter out placeholder text
+        if (inputText && 
+            inputText !== 'Reply to Claude...' && 
+            inputText !== 'Write your prompt to Claude' &&
+            inputText !== 'How can I help you today?') {
           totalTokens += await countTokens(inputText);
         }
       }
-      
+
       // Update indicator with scroll warning if needed
       const modelLimit = CLAUDE_MODELS[this.currentModel];
       const maxTokens = typeof modelLimit === 'number' ? modelLimit : 50000; // Use conservative estimate for variable
-      this.contextIndicator.update(totalTokens, maxTokens, this.hasScrollableContent);
-      console.log(`Context: ${totalTokens}/${maxTokens} tokens (${this.currentModel})`);
       
+      // Check if we have any messages
+      const hasMessages = userMessages.length > 0 || assistantMessages.length > 0;
+      
+      // For chat switches: if this is the initial calculation and we found no messages,
+      // check if this might be a chat that's still loading (not a new empty chat)
+      const isNewChat = window.location.pathname === '/new' || window.location.pathname === '/';
+      const shouldKeepLoading = !this.hasCompletedInitialLoad && !hasMessages && !isNewChat;
+      
+      // Mark initial load as complete only if we found messages or it's a new chat
+      if (!this.hasCompletedInitialLoad && (hasMessages || isNewChat)) {
+        this.hasCompletedInitialLoad = true;
+      }
+      
+      // Update with actual count or keep loading state
+      this.contextIndicator.update(totalTokens, maxTokens, this.hasScrollableContent, shouldKeepLoading);
+      // Context calculated
+
       // Clear old cache entries to prevent memory leaks
       if (this.tokenCache.size > 1000) {
         const entriesToKeep = Array.from(this.tokenCache.entries()).slice(-500);
         this.tokenCache = new Map(entriesToKeep);
       }
     } catch (error) {
-      console.error('Error calculating context:', error);
+      // Error calculating context
     } finally {
       this.isCalculating = false;
     }
@@ -490,6 +574,9 @@ class ClaudeContextTracker {
   public destroy() {
     if (this.observer) {
       this.observer.disconnect();
+    }
+    if (this.inputObserver) {
+      this.inputObserver.disconnect();
     }
     if (this.calculationTimeout) {
       clearTimeout(this.calculationTimeout);
@@ -504,10 +591,22 @@ class ClaudeContextTracker {
 // Initialize tracker with singleton pattern
 let tracker: ClaudeContextTracker | null = null;
 
-// Check if indicator already exists to prevent duplicates
-const existingIndicator = document.querySelector('#ai-context-indicator');
-if (!existingIndicator && !tracker) {
-  tracker = new ClaudeContextTracker();
+// Initialize when DOM is ready
+function initializeTracker() {
+  const existingIndicator = document.querySelector('#ai-context-indicator');
+  if (!existingIndicator && !tracker) {
+    tracker = new ClaudeContextTracker();
+  }
+}
+
+// Check if we're on Claude.ai
+if (window.location.hostname.includes('claude.ai')) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeTracker);
+  } else {
+    // DOM already loaded, initialize immediately
+    setTimeout(initializeTracker, 100); // Small delay to ensure page elements are ready
+  }
 }
 
 // Clean up on page unload

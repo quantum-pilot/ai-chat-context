@@ -48,7 +48,7 @@ async function buildContentScripts() {
 function copyStaticFiles() {
   // Copy manifest.json
   fs.copyFileSync('manifest.json', 'dist/manifest.json');
-  
+
   // Copy CSS files
   const cssDir = 'src/styles';
   if (fs.existsSync(cssDir)) {
@@ -57,28 +57,28 @@ function copyStaticFiles() {
       fs.copyFileSync(path.join(cssDir, file), path.join('dist/styles', file));
     });
   }
-  
+
   console.log('✅ Static files copied');
 }
 
 // Main build function
 async function build() {
   console.log('🔨 Building extension...');
-  
+
   // Clean dist directory
   if (fs.existsSync('dist')) {
     fs.rmSync('dist', { recursive: true, force: true });
   }
-  
+
   // Recreate directories
   dirs.forEach(dir => {
     fs.mkdirSync(dir, { recursive: true });
   });
-  
+
   // Build and copy
   await buildContentScripts();
   copyStaticFiles();
-  
+
   console.log('✅ Build complete!');
 }
 

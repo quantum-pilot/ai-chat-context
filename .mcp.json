@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "container-mcp-wrapper",
+      "args": [
+        "npx",
+        "@playwright/mcp@latest",
+        "--cdp-endpoint",
+        "http://___GW_IP___:9222"
+      ]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    }
+  }
+}
