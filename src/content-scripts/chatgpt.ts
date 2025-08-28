@@ -74,8 +74,6 @@ class ChatGPTContextTracker {
   private currentPlan: ChatGPTPlan = 'free'; // Default to free plan
   private tokenCache: Map<string, number> = new Map();
   private currentUrl: string = window.location.href;
-  private scrollListener: (() => void) | null = null;
-  private hasScrollableContent: boolean = false;
   private calculateDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private hasCompletedInitialLoad: boolean = false;
 
@@ -132,10 +130,10 @@ class ChatGPTContextTracker {
     
     if (hasMessages) {
       // Show loading state only if there are messages to calculate
-      this.contextIndicator.update(0, maxTokens, false, true);
+      this.contextIndicator.update(0, maxTokens, true);
     } else {
       // New chat - just show 0
-      this.contextIndicator.update(0, maxTokens, false, false);
+      this.contextIndicator.update(0, maxTokens, false);
     }
 
     // Detect user plan FIRST before calculating
@@ -149,7 +147,7 @@ class ChatGPTContextTracker {
 
     // Initial calculation AFTER plan detection
     setTimeout(() => {
-      this.calculateContextDebounced(true);
+      this.calculateContextDebounced();
     }, 200);
 
     // Watch for URL changes (chat switches)
@@ -241,16 +239,16 @@ class ChatGPTContextTracker {
         // We'll determine the actual count during calculation
         const models = GPT_MODELS_FREE; // Default to free initially
         const maxTokens = models[this.currentModel] || 16385;
-        this.contextIndicator.update(0, maxTokens, false, true); // Show loading
+        this.contextIndicator.update(0, maxTokens, true); // Show loading
         
         this.observeChat();
-        this.calculateContextDebounced(true); // Initial load for new chat
+        this.calculateContextDebounced(); // Initial load for new chat
         this.detectUserPlan();
         this.observeModelChanges();
 
         // Force another calculation after a delay to catch any late-loading content
         setTimeout(() => {
-          this.calculateContextDebounced(false);
+          this.calculateContextDebounced();
         }, 1500);
       }
     }, 300);
@@ -285,52 +283,10 @@ class ChatGPTContextTracker {
       characterData: true,
     });
 
-    // Set up scroll listener
-    this.setupScrollListener(chatContainer);
+    // Removed scroll listener setup - no longer tracking unloaded content
   }
 
-  private setupScrollListener(container: Element) {
-    // Remove existing listener if any
-    if (this.scrollListener) {
-      window.removeEventListener('scroll', this.scrollListener, true);
-      this.scrollListener = null;
-    }
-
-    // Find the scrollable parent
-    const findScrollableParent = (el: Element): Element | null => {
-      let parent = el.parentElement;
-      while (parent) {
-        const computedStyle = window.getComputedStyle(parent);
-        if (computedStyle.overflowY === 'auto' || computedStyle.overflowY === 'scroll') {
-          return parent;
-        }
-        parent = parent.parentElement;
-      }
-      return null;
-    };
-
-    const scrollableElement = findScrollableParent(container) || container.closest('main');
-    if (scrollableElement) {
-      // Check if content is scrollable
-      const checkScrollable = () => {
-        this.hasScrollableContent = scrollableElement.scrollHeight > scrollableElement.clientHeight;
-        // Scrollable content detected
-      };
-
-      checkScrollable();
-
-      this.scrollListener = () => {
-        checkScrollable();
-        this.calculateContextDebounced();
-      };
-
-      // Listen for scroll events
-      scrollableElement.addEventListener('scroll', this.scrollListener, { passive: true });
-
-      // Also check when DOM changes
-      setTimeout(() => checkScrollable(), 1000);
-    }
-  }
+  // Removed setupScrollListener - no longer tracking unloaded content
 
   private observeModelChanges() {
     const modelSelector = this.querySelector(SELECTORS.modelSelector);
@@ -409,7 +365,7 @@ class ChatGPTContextTracker {
     // Model detected
   }
 
-  private calculateContextDebounced(initialLoad: boolean = false) {
+  private calculateContextDebounced() {
     // Clear any existing timer
     if (this.calculateDebounceTimer) {
       clearTimeout(this.calculateDebounceTimer);
@@ -417,11 +373,11 @@ class ChatGPTContextTracker {
 
     // Set a new timer to calculate after a short delay
     this.calculateDebounceTimer = setTimeout(() => {
-      this.calculateContext(initialLoad);
+      this.calculateContext();
     }, 100); // 100ms debounce
   }
 
-  private async calculateContext(initialLoad: boolean = false) {
+  private async calculateContext() {
     try {
       // Get all messages - try multiple selectors including article-based
       const userMessages = this.querySelectorAll(SELECTORS.userMessages);
@@ -517,7 +473,7 @@ class ChatGPTContextTracker {
       }
       
       // Update with actual count or keep loading state
-      this.contextIndicator.update(totalTokens, maxTokens, this.hasScrollableContent, shouldKeepLoading);
+      this.contextIndicator.update(totalTokens, maxTokens, shouldKeepLoading);
       // Context calculated
 
       // Clear old cache entries to prevent memory leaks
@@ -572,9 +528,7 @@ class ChatGPTContextTracker {
     if (this.observer) {
       this.observer.disconnect();
     }
-    if (this.scrollListener) {
-      window.removeEventListener('scroll', this.scrollListener, true);
-    }
+    // Cleanup - no scroll listener needed anymore
     this.contextIndicator.removeIndicator();
   }
 }

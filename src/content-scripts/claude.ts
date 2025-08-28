@@ -42,7 +42,6 @@ class ClaudeContextTracker {
   private retryCount: number = 0;
   private maxRetries: number = 5;
   private scrollListener: (() => void) | null = null;
-  private hasScrollableContent: boolean = false;
   private isFreeUser: boolean = false;
   private hasCompletedInitialLoad: boolean = false;
 
@@ -109,10 +108,10 @@ class ClaudeContextTracker {
     
     if (hasMessages) {
       // Show loading state only if there are messages to calculate
-      this.contextIndicator.update(0, maxTokens, false, true);
+      this.contextIndicator.update(0, maxTokens, true);
     } else {
       // New chat - just show 0
-      this.contextIndicator.update(0, maxTokens, false, false);
+      this.contextIndicator.update(0, maxTokens, false);
     }
 
     // Start observing chat changes
@@ -194,7 +193,7 @@ class ClaudeContextTracker {
     
     // For chat switches, show loading state by default
     // We'll determine if it's empty during calculation
-    this.contextIndicator.update(0, maxTokens, false, true);
+    this.contextIndicator.update(0, maxTokens, true);
     
     // Re-observe the new chat
     setTimeout(() => {
@@ -249,8 +248,7 @@ class ClaudeContextTracker {
       characterData: true,
     });
 
-    // Set up scroll listener
-    this.setupScrollListener(chatContainer);
+    // Removed scroll listener setup - no longer tracking unloaded content
     
     // Also observe the input field specifically
     this.observeInputField();
@@ -291,48 +289,7 @@ class ClaudeContextTracker {
     });
   }
 
-  private setupScrollListener(container: Element) {
-    // Remove existing listener if any
-    if (this.scrollListener) {
-      window.removeEventListener('scroll', this.scrollListener, true);
-      this.scrollListener = null;
-    }
-
-    // Find the scrollable parent (Claude uses overflow-y classes)
-    const findScrollableParent = (el: Element): Element | null => {
-      let parent = el.parentElement;
-      while (parent) {
-        const computedStyle = window.getComputedStyle(parent);
-        if (computedStyle.overflowY === 'auto' || computedStyle.overflowY === 'scroll') {
-          return parent;
-        }
-        parent = parent.parentElement;
-      }
-      return null;
-    };
-
-    const scrollableElement = findScrollableParent(container);
-    if (scrollableElement) {
-      // Check if content is scrollable
-      const checkScrollable = () => {
-        this.hasScrollableContent = scrollableElement.scrollHeight > scrollableElement.clientHeight;
-        // Scrollable content detected
-      };
-
-      checkScrollable();
-
-      this.scrollListener = () => {
-        checkScrollable();
-        this.scheduleCalculation();
-      };
-
-      // Listen for scroll events
-      scrollableElement.addEventListener('scroll', this.scrollListener, { passive: true });
-
-      // Also check when DOM changes
-      setTimeout(() => checkScrollable(), 1000);
-    }
-  }
+  // Removed setupScrollListener - no longer tracking unloaded content
 
   private observeModelChanges() {
     // First check for free user indicators
@@ -556,7 +513,7 @@ class ClaudeContextTracker {
       }
       
       // Update with actual count or keep loading state
-      this.contextIndicator.update(totalTokens, maxTokens, this.hasScrollableContent, shouldKeepLoading);
+      this.contextIndicator.update(totalTokens, maxTokens, shouldKeepLoading);
       // Context calculated
 
       // Clear old cache entries to prevent memory leaks
@@ -581,9 +538,7 @@ class ClaudeContextTracker {
     if (this.calculationTimeout) {
       clearTimeout(this.calculationTimeout);
     }
-    if (this.scrollListener) {
-      window.removeEventListener('scroll', this.scrollListener, true);
-    }
+    // Removed scroll listener cleanup
     this.contextIndicator.removeIndicator();
   }
 }

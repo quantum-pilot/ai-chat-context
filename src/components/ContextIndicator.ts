@@ -79,7 +79,7 @@ export function createContextIndicator(provider: 'claude' | 'chatgpt' = 'claude'
   });
 
   // Update function
-  const update = (currentTokens: number, maxTokens: number, hasScrollableContent: boolean = false, isLoading: boolean = false) => {
+  const update = (currentTokens: number, maxTokens: number, isLoading: boolean = false) => {
     // Show loading state
     if (isLoading) {
       tokenDisplay.textContent = 'Loading...';
@@ -96,23 +96,24 @@ export function createContextIndicator(provider: 'claude' | 'chatgpt' = 'claude'
     const percentage = Math.round((currentTokens / maxTokens) * 100);
     const remaining = maxTokens - currentTokens;
 
-    // Update text with warning icon if content is scrollable
-    const warningIcon = hasScrollableContent ? '⚠️ ' : '';
-    tokenDisplay.textContent = `${warningIcon}${currentTokens.toLocaleString()} / ${maxTokens.toLocaleString()}`;
+    // Always show approx symbol since count may not include all messages/system prompts
+    tokenDisplay.textContent = `≈ ${currentTokens.toLocaleString()} / ${maxTokens.toLocaleString()}`;
     percentDisplay.textContent = `(${percentage}%)`;
 
-    // Update tooltip
-    const scrollWarning = hasScrollableContent ? '\n\n📜 Note: Scroll to load all messages for accurate count' : '';
-    const systemPromptNote = provider === 'chatgpt' 
-      ? '\n\n💡 System prompts can add: 2K-5K tokens'
-      : '\n\n💡 System prompts can add: 10K-15K tokens';
+    // Update tooltip with permanent notes
+    const systemPromptNote = provider === 'chatgpt'
+      ? 'System prompts can add 2K-5K tokens'
+      : 'System prompts can add 10K-15K tokens';
     tooltip.innerHTML = `
 <strong>Context Window Usage</strong>
-Current: ${currentTokens.toLocaleString()} tokens
+Current: ≈ ${currentTokens.toLocaleString()} tokens
 Maximum: ${maxTokens.toLocaleString()} tokens
-Remaining: ${remaining.toLocaleString()} tokens
-Usage: ${percentage}%
-${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}${scrollWarning}${systemPromptNote}
+Remaining: ≈ ${remaining.toLocaleString()} tokens
+Usage: ≈ ${percentage}%
+${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}
+
+📝 Note: Count may not include all messages if chat history isn\'t fully loaded.
+💡 ${systemPromptNote}
     `.trim();
 
     // Update colors based on usage
@@ -146,6 +147,7 @@ ${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}${scrollWarning}$
     container.style.backgroundColor = bgColor;
     container.style.borderColor = borderColor;
     tokenDisplay.style.color = textColor;
+    percentDisplay.style.color = textColor;
   };
 
   // Add flash animation
