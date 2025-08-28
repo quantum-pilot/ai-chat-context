@@ -79,22 +79,37 @@ export function createContextIndicator() {
   });
 
   // Update function
-  const update = (currentTokens: number, maxTokens: number) => {
+  const update = (currentTokens: number, maxTokens: number, hasScrollableContent: boolean = false, isLoading: boolean = false) => {
+    // Show loading state
+    if (isLoading) {
+      tokenDisplay.textContent = 'Loading...';
+      percentDisplay.textContent = '';
+      tooltip.innerHTML = '<strong>Updating context window...</strong>';
+      container.style.backgroundColor = '#f5f5f5';
+      container.style.borderColor = '#bdbdbd';
+      tokenDisplay.style.color = '#757575';
+      container.style.animation = 'pulse 1.5s ease-in-out infinite';
+      addPulseAnimation();
+      return;
+    }
+    
     const percentage = Math.round((currentTokens / maxTokens) * 100);
     const remaining = maxTokens - currentTokens;
     
-    // Update text
-    tokenDisplay.textContent = `${currentTokens.toLocaleString()} / ${maxTokens.toLocaleString()}`;
+    // Update text with warning icon if content is scrollable
+    const warningIcon = hasScrollableContent ? '⚠️ ' : '';
+    tokenDisplay.textContent = `${warningIcon}${currentTokens.toLocaleString()} / ${maxTokens.toLocaleString()}`;
     percentDisplay.textContent = `(${percentage}%)`;
     
     // Update tooltip
+    const scrollWarning = hasScrollableContent ? '\n\n📜 Note: Scroll to load all messages for accurate count' : '';
     tooltip.innerHTML = `
 <strong>Context Window Usage</strong>
 Current: ${currentTokens.toLocaleString()} tokens
 Maximum: ${maxTokens.toLocaleString()} tokens
 Remaining: ${remaining.toLocaleString()} tokens
 Usage: ${percentage}%
-${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}
+${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}${scrollWarning}
     `.trim();
     
     // Update colors based on usage
@@ -139,6 +154,21 @@ ${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}
         @keyframes flash {
           0%, 50%, 100% { opacity: 1; }
           25%, 75% { opacity: 0.5; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  };
+  
+  // Add pulse animation for loading state
+  const addPulseAnimation = () => {
+    if (!document.querySelector('#context-pulse-style')) {
+      const style = document.createElement('style');
+      style.id = 'context-pulse-style';
+      style.textContent = `
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
         }
       `;
       document.head.appendChild(style);

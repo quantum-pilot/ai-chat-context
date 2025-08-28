@@ -1,20 +1,41 @@
 export const BUFFER_PERCENTAGE = 0.1; // 10% safety buffer
 
-export const CLAUDE_MODELS: { [key: string]: number } = {
-  'claude-3-opus': 200000,
-  'claude-3-sonnet': 200000,
-  'claude-3-haiku': 200000,
-  'claude-2.1': 200000,
-  'claude-2': 100000,
-  'claude-instant': 100000
+// Claude models - all paid plans have 200k context
+export const CLAUDE_MODELS: { [key: string]: number | "variable" } = {
+  // Current Claude models
+  'claude-sonnet-4': 200000,
+  'claude-opus-4.1': 200000,
+  'claude-3.7-sonnet': 200000,
+  'claude-3.5-sonnet': 200000, // Legacy but still shows up
+
+  // Free plan varies with demand
+  'claude-free-web': 50000 // Conservative estimate for free plan
 };
 
-export const GPT_MODELS: { [key: string]: number } = {
-  'gpt-4-turbo': 128000,
-  'gpt-4': 8192,
-  'gpt-4-32k': 32768,
-  'gpt-3.5-turbo': 4096,
-  'gpt-3.5-turbo-16k': 16385
+// ChatGPT Free plan models
+export const GPT_MODELS_FREE: { [key: string]: number } = {
+  'gpt-5-fast': 16000
+};
+
+// ChatGPT Plus plan models  
+export const GPT_MODELS_PLUS: { [key: string]: number } = {
+  'gpt-5-fast': 32000,
+  'gpt-5-thinking': 196000,
+  'o3': 200000,
+  'o4-mini': 200000,
+  'gpt-4o': 128000,
+  'gpt-4.1': 32000,
+};
+
+// ChatGPT Pro plan models
+export const GPT_MODELS_PRO: { [key: string]: number } = {
+  'gpt-5-fast': 128000,
+  'gpt-5-thinking': 196000,
+  'gpt-5-pro': 196000,
+  'o3': 200000,
+  'o4-mini': 200000,
+  'gpt-4o': 128000,
+  'gpt-4.1': 128000,
 };
 
 
