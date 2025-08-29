@@ -5,7 +5,7 @@ export function createContextIndicator(provider: 'claude' | 'chatgpt' = 'claude'
   // Apply styles
   container.style.cssText = `
     position: fixed;
-    top: 20px;
+    top: 60px;
     right: 20px;
     background: white;
     border: 2px solid #e0e0e0;

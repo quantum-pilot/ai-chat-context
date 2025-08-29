@@ -3,25 +3,26 @@
   "name": "AI Chat Context Window",
   "version": "1.0.0",
   "description": "Display context window usage for Claude and ChatGPT interfaces",
-  "permissions": [
-    "activeTab",
-    "storage"
-  ],
-  "host_permissions": [
-    "https://claude.ai/*",
-    "https://chat.openai.com/*",
-    "https://chatgpt.com/*"
-  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ai-chat-context@extension",
+      "strict_min_version": "109.0"
+    }
+  },
+  "icons": {
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
   "content_scripts": [
     {
       "matches": [
         "https://claude.ai/*"
       ],
       "js": [
-        "dist/content-scripts/claude.js"
+        "content-scripts/claude.js"
       ],
       "css": [
-        "dist/styles/indicator.css"
+        "styles/indicator.css"
       ],
       "run_at": "document_idle"
     },
@@ -31,24 +32,12 @@
         "https://chatgpt.com/*"
       ],
       "js": [
-        "dist/content-scripts/chatgpt.js"
+        "content-scripts/chatgpt.js"
       ],
       "css": [
-        "dist/styles/indicator.css"
+        "styles/indicator.css"
       ],
       "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "dist/styles/indicator.css"
-      ],
-      "matches": [
-        "https://claude.ai/*",
-        "https://chat.openai.com/*",
-        "https://chatgpt.com/*"
-      ]
     }
   ]
 }

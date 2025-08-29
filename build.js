@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Ensure dist directories exist
-const dirs = ['dist', 'dist/content-scripts', 'dist/components', 'dist/utils', 'dist/styles'];
+const dirs = ['dist', 'dist/content-scripts', 'dist/components', 'dist/utils', 'dist/styles', 'dist/icons'];
 dirs.forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -55,6 +55,15 @@ function copyStaticFiles() {
     const cssFiles = fs.readdirSync(cssDir).filter(f => f.endsWith('.css'));
     cssFiles.forEach(file => {
       fs.copyFileSync(path.join(cssDir, file), path.join('dist/styles', file));
+    });
+  }
+
+  // Copy icons
+  const iconsDir = 'icons';
+  if (fs.existsSync(iconsDir)) {
+    const iconFiles = fs.readdirSync(iconsDir).filter(f => f.endsWith('.png'));
+    iconFiles.forEach(file => {
+      fs.copyFileSync(path.join(iconsDir, file), path.join('dist/icons', file));
     });
   }
 

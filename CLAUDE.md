@@ -12,7 +12,7 @@ npm run build
 ```
 
 ### Test with MCP Playwright
-1. Load extension at chrome://extensions (Developer mode ON → Load unpacked → select `/workspace/dist`)
+1. Load extension at chrome://extensions (Developer mode ON → Load unpacked → select `dist/`)
 2. Navigate to Claude.ai or ChatGPT.com
 3. Verify token counter appears (top-right corner)
 4. Type messages and verify counter updates
