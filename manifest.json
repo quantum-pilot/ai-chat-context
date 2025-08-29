@@ -39,5 +39,18 @@
       ],
       "run_at": "document_idle"
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "wasm/tiktoken_bg.wasm",
+        "encodings/o200k_base.json"
+      ],
+      "matches": [
+        "https://claude.ai/*",
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*"
+      ]
+    }
   ]
 }

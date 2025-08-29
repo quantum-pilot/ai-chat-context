@@ -124,10 +124,10 @@ class ChatGPTContextTracker {
     // For new/empty chats, just show 0 immediately
     const models = GPT_MODELS_FREE; // Default to free models initially
     const maxTokens = models[this.currentModel] || 16385;
-    
+
     // Check if there are any messages first
     const hasMessages = this.querySelectorAll([...SELECTORS.userMessages, ...SELECTORS.assistantMessages]).length > 0;
-    
+
     if (hasMessages) {
       // Show loading state only if there are messages to calculate
       this.contextIndicator.update(0, maxTokens, true);
@@ -212,7 +212,7 @@ class ChatGPTContextTracker {
 
     // Clear token cache for new chat
     this.tokenCache.clear();
-    
+
     // Reset initial load flag for new chat
     this.hasCompletedInitialLoad = false;
 
@@ -234,13 +234,13 @@ class ChatGPTContextTracker {
 
       if (messages.length > 0 || hasNewChat || retries >= maxRetries) {
         clearInterval(retryInterval);
-        
+
         // For chat switches, show loading state by default
         // We'll determine the actual count during calculation
         const models = GPT_MODELS_FREE; // Default to free initially
         const maxTokens = models[this.currentModel] || 16385;
         this.contextIndicator.update(0, maxTokens, true); // Show loading
-        
+
         this.observeChat();
         this.calculateContextDebounced(); // Initial load for new chat
         this.detectUserPlan();
@@ -412,7 +412,7 @@ class ChatGPTContextTracker {
         if (this.tokenCache.has(cacheKey)) {
           totalTokens += this.tokenCache.get(cacheKey)!;
         } else {
-          const tokens = await countTokens(text);
+          const tokens = await countTokens(text, 'chatgpt');
           this.tokenCache.set(cacheKey, tokens);
           totalTokens += tokens;
         }
@@ -426,7 +426,7 @@ class ChatGPTContextTracker {
         if (this.tokenCache.has(cacheKey)) {
           totalTokens += this.tokenCache.get(cacheKey)!;
         } else {
-          const tokens = await countTokens(text);
+          const tokens = await countTokens(text, 'chatgpt');
           this.tokenCache.set(cacheKey, tokens);
           totalTokens += tokens;
         }
@@ -437,7 +437,7 @@ class ChatGPTContextTracker {
       if (inputField) {
         const inputText = 'value' in inputField ? inputField.value : inputField.textContent || '';
         if (inputText) {
-          totalTokens += await countTokens(inputText);
+          totalTokens += await countTokens(inputText, 'chatgpt');
         }
       }
 
@@ -458,20 +458,20 @@ class ChatGPTContextTracker {
 
       // Update indicator with scroll warning if needed
       const maxTokens = modelLimits[this.currentModel] || modelLimits['gpt-5-fast'] || 16000;
-      
+
       // Check if we have any messages
       const hasMessages = userMessages.length > 0 || assistantMessages.length > 0;
-      
+
       // For chat switches: if this is the initial calculation and we found no messages,
       // check if this might be a chat that's still loading (not a new empty chat)
       const isNewChat = window.location.pathname === '/' || window.location.pathname.includes('/new');
       const shouldKeepLoading = !this.hasCompletedInitialLoad && !hasMessages && !isNewChat;
-      
+
       // Mark initial load as complete only if we found messages or it's a new chat
       if (!this.hasCompletedInitialLoad && (hasMessages || isNewChat)) {
         this.hasCompletedInitialLoad = true;
       }
-      
+
       // Update with actual count or keep loading state
       this.contextIndicator.update(totalTokens, maxTokens, shouldKeepLoading);
       // Context calculated

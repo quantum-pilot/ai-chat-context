@@ -9,7 +9,7 @@ const SELECTORS = {
   chatContainer: [
     '[data-testid="conversation-turns"]', // Original selector
     'div.flex.flex-col:has(div[data-testid^="user-"])', // Flex container with user messages
-    'div.flex.flex-col:has(div[data-testid^="assistant-"])', // Flex container with assistant messages  
+    'div.flex.flex-col:has(div[data-testid^="assistant-"])', // Flex container with assistant messages
     'main div.flex.flex-col', // Main flex column in chat area
     'main > div > div', // Main content area
     '.relative.mx-auto', // Content wrapper
@@ -101,11 +101,11 @@ class ClaudeContextTracker {
     // For new/empty chats, just show 0 immediately
     const modelLimit = CLAUDE_MODELS[this.currentModel];
     const maxTokens = typeof modelLimit === 'number' ? modelLimit : 50000;
-    
+
     // Check if there are any messages first
-    const hasMessages = document.querySelector(SELECTORS.userMessage) || 
-                       document.querySelector('[data-testid^="assistant-"]');
-    
+    const hasMessages = document.querySelector(SELECTORS.userMessage) ||
+      document.querySelector('[data-testid^="assistant-"]');
+
     if (hasMessages) {
       // Show loading state only if there are messages to calculate
       this.contextIndicator.update(0, maxTokens, true);
@@ -173,7 +173,7 @@ class ClaudeContextTracker {
 
     // Clear token cache for new chat
     this.tokenCache.clear();
-    
+
     // Reset initial load flag for new chat
     this.hasCompletedInitialLoad = false;
 
@@ -190,11 +190,11 @@ class ClaudeContextTracker {
     // Show loading state immediately for chat switches
     const modelLimit = CLAUDE_MODELS[this.currentModel];
     const maxTokens = typeof modelLimit === 'number' ? modelLimit : 50000;
-    
+
     // For chat switches, show loading state by default
     // We'll determine if it's empty during calculation
     this.contextIndicator.update(0, maxTokens, true);
-    
+
     // Re-observe the new chat
     setTimeout(() => {
       this.retryCount = 0; // Reset retry count for new chat
@@ -249,7 +249,7 @@ class ClaudeContextTracker {
     });
 
     // Removed scroll listener setup - no longer tracking unloaded content
-    
+
     // Also observe the input field specifically
     this.observeInputField();
   }
@@ -360,7 +360,7 @@ class ClaudeContextTracker {
       // Default to latest Sonnet if version not specified
       this.currentModel = 'claude-sonnet-4';
     } else if (!this.isFreeUser) {
-      // If paid user but no model detected, default to latest model  
+      // If paid user but no model detected, default to latest model
       this.currentModel = 'claude-sonnet-4';
     }
     // Model detected
@@ -448,7 +448,7 @@ class ClaudeContextTracker {
         if (this.tokenCache.has(cacheKey)) {
           totalTokens += this.tokenCache.get(cacheKey)!;
         } else {
-          const tokens = await countTokens(text);
+          const tokens = await countTokens(text, 'claude');
           this.tokenCache.set(cacheKey, tokens);
           totalTokens += tokens;
           // Counted user message tokens
@@ -465,7 +465,7 @@ class ClaudeContextTracker {
         if (this.tokenCache.has(cacheKey)) {
           totalTokens += this.tokenCache.get(cacheKey)!;
         } else {
-          const tokens = await countTokens(cleanText);
+          const tokens = await countTokens(cleanText, 'claude');
           this.tokenCache.set(cacheKey, tokens);
           totalTokens += tokens;
           // Counted assistant message tokens
@@ -485,33 +485,33 @@ class ClaudeContextTracker {
           // Fallback to regular text content or value
           inputText = (inputField as HTMLElement).textContent || (inputField as HTMLInputElement).value || '';
         }
-        
+
         // Filter out placeholder text
-        if (inputText && 
-            inputText !== 'Reply to Claude...' && 
-            inputText !== 'Write your prompt to Claude' &&
-            inputText !== 'How can I help you today?') {
-          totalTokens += await countTokens(inputText);
+        if (inputText &&
+          inputText !== 'Reply to Claude...' &&
+          inputText !== 'Write your prompt to Claude' &&
+          inputText !== 'How can I help you today?') {
+          totalTokens += await countTokens(inputText, 'claude');
         }
       }
 
       // Update indicator with scroll warning if needed
       const modelLimit = CLAUDE_MODELS[this.currentModel];
       const maxTokens = typeof modelLimit === 'number' ? modelLimit : 50000; // Use conservative estimate for variable
-      
+
       // Check if we have any messages
       const hasMessages = userMessages.length > 0 || assistantMessages.length > 0;
-      
+
       // For chat switches: if this is the initial calculation and we found no messages,
       // check if this might be a chat that's still loading (not a new empty chat)
       const isNewChat = window.location.pathname === '/new' || window.location.pathname === '/';
       const shouldKeepLoading = !this.hasCompletedInitialLoad && !hasMessages && !isNewChat;
-      
+
       // Mark initial load as complete only if we found messages or it's a new chat
       if (!this.hasCompletedInitialLoad && (hasMessages || isNewChat)) {
         this.hasCompletedInitialLoad = true;
       }
-      
+
       // Update with actual count or keep loading state
       this.contextIndicator.update(totalTokens, maxTokens, shouldKeepLoading);
       // Context calculated
