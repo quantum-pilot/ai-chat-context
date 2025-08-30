@@ -121,40 +121,23 @@ class ChatGPTContextTracker {
     // Insert context indicator into page
     this.insertIndicator();
 
-    // For new/empty chats, just show 0 immediately
-    const models = GPT_MODELS_FREE; // Default to free models initially
-    const maxTokens = models[this.currentModel] || 16385;
-
-    // Check if there are any messages first
-    const hasMessages = this.querySelectorAll([...SELECTORS.userMessages, ...SELECTORS.assistantMessages]).length > 0;
-
-    if (hasMessages) {
-      // Show loading state only if there are messages to calculate
-      this.contextIndicator.update(0, maxTokens, true);
-    } else {
-      // New chat - just show 0
-      this.contextIndicator.update(0, maxTokens, false);
-    }
-
-    // Detect user plan FIRST before calculating
-    this.detectUserPlan();
-
-    // Observe model changes
-    this.observeModelChanges();
+    // Start with loading state - don't show any numbers until we have correct data
+    this.contextIndicator.update(0, 100000, true); // Show loading state
 
     // Start observing chat changes
     this.observeChat();
 
-    // Initial calculation AFTER plan detection
-    setTimeout(() => {
-      this.calculateContextDebounced();
-    }, 200);
+    // Detect user plan first
+    this.detectUserPlan();
+
+    // Set up model observer and wait for proper model detection
+    this.observeModelSelectorChanges();
+
+    // Don't do initial calculation here - let the model observer trigger it
+    // when the model is actually detected
 
     // Watch for URL changes (chat switches)
     this.observeUrlChanges();
-
-    // Set up mutation observer for model selector changes
-    this.observeModelSelectorChanges();
   }
 
   private observeUrlChanges() {
@@ -443,6 +426,24 @@ class ChatGPTContextTracker {
 
       // Don't add system prompt estimate - we'll note the range in tooltip instead
 
+      // Check if model is properly detected by looking at the model selector
+      const modelSelector = this.querySelector(SELECTORS.modelSelector);
+      const modelText = modelSelector?.textContent || '';
+      const isNewChat = window.location.pathname === '/' || window.location.pathname.includes('/new');
+
+      // If we're on a chat page (not new chat) and the model selector doesn't show the actual model yet, keep loading
+      if (!isNewChat) {
+        const isModelLoaded = modelText.includes('Thinking') || modelText.includes('Fast') ||
+          modelText.includes('Pro') || modelText.includes('o3') ||
+          modelText.includes('o4') || modelText.includes('4o');
+
+        if (!isModelLoaded) {
+          // Model not yet loaded, keep showing loading state
+          this.contextIndicator.update(0, 100000, true);
+          return;
+        }
+      }
+
       // Get model limits based on plan
       let modelLimits: { [key: string]: number };
       switch (this.currentPlan) {
@@ -464,7 +465,6 @@ class ChatGPTContextTracker {
 
       // For chat switches: if this is the initial calculation and we found no messages,
       // check if this might be a chat that's still loading (not a new empty chat)
-      const isNewChat = window.location.pathname === '/' || window.location.pathname.includes('/new');
       const shouldKeepLoading = !this.hasCompletedInitialLoad && !hasMessages && !isNewChat;
 
       // Mark initial load as complete only if we found messages or it's a new chat
@@ -492,17 +492,31 @@ class ChatGPTContextTracker {
       const modelSelector = this.querySelector(SELECTORS.modelSelector);
       if (modelSelector) {
         // Create observer for the model selector button text changes
+        // Check initial model state
+        const initialModelText = modelSelector.textContent || '';
+        const initialAriaLabel = modelSelector.getAttribute('aria-label') || '';
+
+        // Only trigger calculation if we have a real model (not just "ChatGPT")
+        if (initialModelText.includes('Thinking') || initialModelText.includes('Fast') ||
+          initialModelText.includes('Pro') || initialModelText.includes('o3') ||
+          initialModelText.includes('o4') || initialModelText.includes('4o')) {
+          this.updateModel(initialModelText || initialAriaLabel);
+          this.calculateContextDebounced();
+        }
+
         const modelObserver = new MutationObserver(() => {
           const modelText = modelSelector.textContent || '';
           const ariaLabel = modelSelector.getAttribute('aria-label') || '';
           const newModel = modelText || ariaLabel;
 
-          // Update model and recalculate if changed
-          const prevModel = this.currentModel;
-          this.updateModel(newModel);
+          // Check if this is a real model update (not just "ChatGPT")
+          if (modelText.includes('Thinking') || modelText.includes('Fast') ||
+            modelText.includes('Pro') || modelText.includes('o3') ||
+            modelText.includes('o4') || modelText.includes('4o')) {
+            const prevModel = this.currentModel;
+            this.updateModel(newModel);
 
-          if (prevModel !== this.currentModel) {
-            // Model changed
+            // Always recalculate when we detect a real model
             this.calculateContextDebounced();
           }
         });

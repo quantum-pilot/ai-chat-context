@@ -88,8 +88,7 @@ export function createContextIndicator(provider: 'claude' | 'chatgpt' = 'claude'
       container.style.backgroundColor = '#f5f5f5';
       container.style.borderColor = '#bdbdbd';
       tokenDisplay.style.color = '#757575';
-      container.style.animation = 'pulse 1.5s ease-in-out infinite';
-      addPulseAnimation();
+      // No animation for loading state
       return;
     }
 
@@ -127,21 +126,13 @@ ${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}
       borderColor = '#f44336';
       textColor = '#c62828';
 
-      // Add flashing animation if over limit
-      if (percentage >= 100) {
-        container.style.animation = 'flash 1s infinite';
-        addFlashAnimation();
-      } else {
-        container.style.animation = 'none';
-      }
+      // No animation - just solid red
     } else if (percentage > 70) {
       // Yellow - Warning
       bgColor = '#fff3e0';
       borderColor = '#ff9800';
       textColor = '#e65100';
-      container.style.animation = 'none';
     } else {
-      container.style.animation = 'none';
     }
 
     container.style.backgroundColor = bgColor;
@@ -150,43 +141,11 @@ ${percentage > 90 ? '\n⚠️ Approaching context limit!' : ''}
     percentDisplay.style.color = textColor;
   };
 
-  // Add flash animation
-  const addFlashAnimation = () => {
-    if (!document.querySelector('#context-flash-style')) {
-      const style = document.createElement('style');
-      style.id = 'context-flash-style';
-      style.textContent = `
-        @keyframes flash {
-          0%, 50%, 100% { opacity: 1; }
-          25%, 75% { opacity: 0.5; }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  };
 
-  // Add pulse animation for loading state
-  const addPulseAnimation = () => {
-    if (!document.querySelector('#context-pulse-style')) {
-      const style = document.createElement('style');
-      style.id = 'context-pulse-style';
-      style.textContent = `
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.6; }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  };
 
   // Remove function
   const removeIndicator = () => {
     container.parentNode?.removeChild(container);
-    const flashStyle = document.querySelector('#context-flash-style');
-    if (flashStyle) {
-      flashStyle.parentNode?.removeChild(flashStyle);
-    }
   };
 
   // Return interface with custom methods

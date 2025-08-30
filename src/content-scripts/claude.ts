@@ -98,7 +98,10 @@ class ClaudeContextTracker {
     // Insert context indicator into page
     this.insertIndicator();
 
-    // For new/empty chats, just show 0 immediately
+    // Detect model FIRST before any calculations
+    this.observeModelChanges();
+
+    // Now use the detected model's limit
     const modelLimit = CLAUDE_MODELS[this.currentModel];
     const maxTokens = typeof modelLimit === 'number' ? modelLimit : 50000;
 
@@ -121,9 +124,6 @@ class ClaudeContextTracker {
     setTimeout(() => {
       this.calculateContext(true);
     }, 200);
-
-    // Observe model changes if selector exists
-    this.observeModelChanges();
 
     // Watch for URL changes (chat switches)
     this.observeUrlChanges();
