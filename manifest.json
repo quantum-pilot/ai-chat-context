@@ -6,7 +6,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "ai-chat-context@extension",
-      "strict_min_version": "109.0"
+      "strict_min_version": "121.0"
     }
   },
   "icons": {
@@ -44,13 +44,18 @@
     {
       "resources": [
         "wasm/tiktoken_bg.wasm",
-        "encodings/o200k_base.json"
+        "encodings/o200k_base.json",
+        "encodings/claude.json"
       ],
-      "matches": [
-        "https://claude.ai/*",
-        "https://chat.openai.com/*",
-        "https://chatgpt.com/*"
-      ]
+      "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "background": {
+    "service_worker": "background/sw.js",
+    "scripts": ["background/event-page.js"],
+    "type": "module"
+  }
 }

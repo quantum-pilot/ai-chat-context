@@ -20,7 +20,6 @@ async function buildContentScripts() {
       format: 'iife',
       minify: true,
       sourcemap: false,
-      external: ['*.wasm', '*.json'],
     });
 
     // Build ChatGPT content script
@@ -33,12 +32,56 @@ async function buildContentScripts() {
       format: 'iife',
       minify: true,
       sourcemap: false,
-      external: ['*.wasm', '*.json'],
     });
 
     console.log('✅ Content scripts bundled successfully');
   } catch (error) {
     console.error('❌ Error building content scripts:', error);
+    process.exit(1);
+  }
+}
+
+// Build background scripts for both Chrome and Firefox
+async function buildBackgroundScripts() {
+  try {
+    // Ensure background directory exists
+    if (!fs.existsSync('dist/background')) {
+      fs.mkdirSync('dist/background', { recursive: true });
+    }
+
+    // Build Chrome service worker
+    await esbuild.build({
+      entryPoints: ['src/background/sw.ts'],
+      bundle: true,
+      outfile: 'dist/background/sw.js',
+      platform: 'browser',
+      target: 'chrome90',
+      format: 'iife',
+      minify: true,
+      sourcemap: false,
+      loader: {
+        '.json': 'json',
+      },
+    });
+
+    // Build Firefox event page
+    await esbuild.build({
+      entryPoints: ['src/background/event-page.ts'],
+      bundle: true,
+      outfile: 'dist/background/event-page.js',
+      platform: 'browser',
+      target: 'firefox109',
+      format: 'iife',
+      minify: true,
+      sourcemap: false,
+      loader: {
+        '.json': 'json',
+      },
+    });
+
+    console.log('✅ Background scripts bundled successfully');
+  } catch (error) {
+    console.error('❌ Error building background scripts:', error);
     process.exit(1);
   }
 }
@@ -78,33 +121,31 @@ function copyStaticFiles() {
     }
   }
 
-  // Copy WASM file from tiktoken
-  const wasmSource = 'node_modules/tiktoken/lite/tiktoken_bg.wasm';
-  if (fs.existsSync(wasmSource)) {
-    // Only create wasm directory when copying the WASM file
-    if (!fs.existsSync('dist/wasm')) {
-      fs.mkdirSync('dist/wasm', { recursive: true });
-    }
-    fs.copyFileSync(wasmSource, 'dist/wasm/tiktoken_bg.wasm');
-    console.log('✅ WASM file copied');
-  } else {
-    console.error('⚠️ WASM file not found at:', wasmSource);
+  // Create directories for WASM and encodings
+  if (!fs.existsSync('dist/wasm')) {
+    fs.mkdirSync('dist/wasm', { recursive: true });
+  }
+  if (!fs.existsSync('dist/encodings')) {
+    fs.mkdirSync('dist/encodings', { recursive: true });
   }
 
-  // Copy o200k_base encoding JSON file
-  const encodingSource = 'node_modules/tiktoken/encoders/o200k_base.json';
-  if (fs.existsSync(encodingSource)) {
-    // Only create encodings directory when copying the encoding file
-    if (!fs.existsSync('dist/encodings')) {
-      fs.mkdirSync('dist/encodings', { recursive: true });
-    }
-    fs.copyFileSync(encodingSource, 'dist/encodings/o200k_base.json');
-    console.log('✅ Encoding file copied');
-  } else {
-    console.error('⚠️ Encoding file not found at:', encodingSource);
-  }
+  // Copy WASM file
+  fs.copyFileSync(
+    'node_modules/tiktoken/lite/tiktoken_bg.wasm',
+    'dist/wasm/tiktoken_bg.wasm'
+  );
 
-  console.log('✅ Static files copied');
+  // Copy encoding files
+  fs.copyFileSync(
+    'node_modules/tiktoken/encoders/o200k_base.json',
+    'dist/encodings/o200k_base.json'
+  );
+  fs.copyFileSync(
+    'node_modules/@anthropic-ai/tokenizer/dist/cjs/claude.json',
+    'dist/encodings/claude.json'
+  );
+
+  console.log('✅ Static files, WASM, and encodings copied');
 }
 
 // Main build function
@@ -121,6 +162,7 @@ async function build() {
 
   // Build and copy
   await buildContentScripts();
+  await buildBackgroundScripts();
   copyStaticFiles();
 
   console.log('✅ Build complete!');
