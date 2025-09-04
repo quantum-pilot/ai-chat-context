@@ -12,13 +12,13 @@ Browser extension that displays real-time token usage for Claude.ai and ChatGPT 
 ## Installation
 
 ### Chrome
-1. Download latest release or build from source
+1. Download [latest extension](https://chromewebstore.google.com/detail/ai-chat-context-window/mimifpjpnpkpkkjbmkpchgdglkdmdmof) or build from source
 2. Open `chrome://extensions`
 3. Enable Developer mode
 4. Click "Load unpacked" → select `dist/` folder
 
 ### Firefox
-1. Download latest release or build from source
+1. Download [latest extension](https://addons.mozilla.org/en-US/firefox/addon/ai-chat-context-window/) or build from source
 2. Open `about:debugging`
 3. Click "This Firefox" → "Load Temporary Add-on"
 4. Select any file in `dist/` folder
