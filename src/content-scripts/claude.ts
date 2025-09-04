@@ -324,43 +324,41 @@ class ClaudeContextTracker {
     const hasUpgradePrompts = document.body.textContent?.includes('Upgrade to') || false;
     const hasLimitMessages = document.body.textContent?.includes('message limit') || false;
     const hasFreeIndicator = document.querySelector('[data-testid="free-badge"]') !== null;
+    const hasFreeText = document.body.textContent?.includes('Free plan') || false;
 
     // Only mark as free user if no paid plan detected AND free indicators present
-    this.isFreeUser = !hasPaidPlan && (hasUpgradePrompts || hasLimitMessages || hasFreeIndicator);
+    this.isFreeUser = !hasPaidPlan && (hasUpgradePrompts || hasLimitMessages || hasFreeIndicator || hasFreeText);
 
-    if (this.isFreeUser) {
-      // Detected Claude Free user
-      this.currentModel = 'claude-free-web';
-    } else if (hasPaidPlan) {
-      // Detected Claude paid plan
-      // Don't override model here, let model detection handle it
-    }
+    // Note: Free users still access the same models as paid users
+    // Model detection should work the same way regardless of plan type
   }
 
   private updateModel(modelText: string) {
     const text = modelText.toLowerCase();
 
-    // Check for free user first
+    // Check for user plan type (for analytics/logging, but doesn't affect model detection)
     this.detectFreeUser();
-    if (this.isFreeUser) {
-      this.currentModel = 'claude-free-web';
-      return;
-    }
 
     // Parse model from text - check for new model names first
     if (text.includes('sonnet 4') || text.includes('sonnet-4')) {
       this.currentModel = 'claude-sonnet-4';
     } else if (text.includes('opus 4.1') || text.includes('opus-4.1')) {
       this.currentModel = 'claude-opus-4.1';
-    } else if (text.includes('3.7 sonnet') || text.includes('3.7-sonnet')) {
+    } else if (text.includes('opus 4') || text.includes('opus-4')) {
+      this.currentModel = 'claude-opus-4';
+    } else if (text.includes('3.7 sonnet') || text.includes('3.7-sonnet') || text.includes('sonnet 3.7')) {
       this.currentModel = 'claude-3.7-sonnet';
-    } else if (text.includes('3.5 sonnet') || text.includes('3.5-sonnet')) {
+    } else if (text.includes('3.5 sonnet') || text.includes('3.5-sonnet') || text.includes('sonnet 3.5')) {
       this.currentModel = 'claude-3.5-sonnet';
+    } else if (text.includes('3.5 haiku') || text.includes('3.5-haiku') || text.includes('haiku 3.5')) {
+      this.currentModel = 'claude-3.5-haiku';
+    } else if (text.includes('opus 3') || text.includes('opus-3')) {
+      this.currentModel = 'claude-opus-3';
     } else if (text.includes('sonnet')) {
       // Default to latest Sonnet if version not specified
       this.currentModel = 'claude-sonnet-4';
-    } else if (!this.isFreeUser) {
-      // If paid user but no model detected, default to latest model
+    } else {
+      // If no model detected, default to latest model
       this.currentModel = 'claude-sonnet-4';
     }
     // Model detected

@@ -5,11 +5,12 @@ export const CLAUDE_MODELS: { [key: string]: number | "variable" } = {
   // Current Claude models
   'claude-sonnet-4': 200000,
   'claude-opus-4.1': 200000,
+  'claude-opus-4': 200000,
   'claude-3.7-sonnet': 200000,
-  'claude-3.5-sonnet': 200000, // Legacy but still shows up
-
-  // Free plan varies with demand
-  'claude-free-web': 50000 // Conservative estimate for free plan
+  // Legacy but still shows up
+  'claude-3.5-sonnet': 200000,
+  'claude-3.5-haiku': 200000,
+  'claude-opus-3': 200000,
 };
 
 // ChatGPT Free plan models
@@ -17,7 +18,7 @@ export const GPT_MODELS_FREE: { [key: string]: number } = {
   'gpt-5-fast': 16000
 };
 
-// ChatGPT Plus plan models  
+// ChatGPT Plus plan models
 export const GPT_MODELS_PLUS: { [key: string]: number } = {
   'gpt-5-fast': 32000,
   'gpt-5-thinking': 196000,

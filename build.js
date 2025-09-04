@@ -49,7 +49,7 @@ async function buildBackgroundScripts() {
       fs.mkdirSync('dist/background', { recursive: true });
     }
 
-    // Build Chrome service worker
+    // Build Chrome service worker (from shared source)
     await esbuild.build({
       entryPoints: ['src/background/sw.ts'],
       bundle: true,
@@ -64,9 +64,9 @@ async function buildBackgroundScripts() {
       },
     });
 
-    // Build Firefox event page
+    // Build Firefox event page (from same shared source)
     await esbuild.build({
-      entryPoints: ['src/background/event-page.ts'],
+      entryPoints: ['src/background/sw.ts'],
       bundle: true,
       outfile: 'dist/background/event-page.js',
       platform: 'browser',
